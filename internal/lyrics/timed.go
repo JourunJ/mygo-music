@@ -12,6 +12,7 @@ var (
 	qrcLine = regexp.MustCompile(`^\[(\d+),(\d+)\]`)
 	qrcWord = regexp.MustCompile(`\((\d+),(\d+),\d+\)`)
 	wordTime = regexp.MustCompile(`[<\[]((?:\d+):\d{2}(?:[.:]\d+)?)[>\]]`)
+	bracketWordTimes = regexp.MustCompile(`\[\d+:\d{2}(?:[.:]\d+)?\]`)
 	lineTime = regexp.MustCompile(`^\[(\d+):(\d{2})(?:[.:](\d+))?\]`)
 	endTime = regexp.MustCompile(`\[(\d+):(\d{2})(?:[.:](\d+))?\]\s*$`)
 )
@@ -69,6 +70,13 @@ func ParseTimed(text string) (*music.Lyrics, bool) {
 		}
 
 		startMatch := lineTime.FindStringSubmatchIndex(raw)
+		// In bracketed enhanced LRC, the first word timestamp is also at
+		// the beginning of the line. Keep it in the body when the line has
+		// multiple word timestamps; a two-timestamp translation row remains
+		// a normal line-timed row.
+		if len(bracketWordTimes.FindAllStringIndex(raw, -1)) >= 3 {
+			startMatch = nil
+		}
 		if startMatch == nil && !wordTime.MatchString(raw) {
 			continue
 		}
