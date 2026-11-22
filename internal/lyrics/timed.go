@@ -11,7 +11,7 @@ import (
 var (
 	qrcLine = regexp.MustCompile(`^\[(\d+),(\d+)\]`)
 	qrcWord = regexp.MustCompile(`\((\d+),(\d+),\d+\)`)
-	wordTime = regexp.MustCompile(`<((?:\d+):\d{2}(?:[.:]\d+)?)>`)
+	wordTime = regexp.MustCompile(`[<\[]((?:\d+):\d{2}(?:[.:]\d+)?)[>\]]`)
 	lineTime = regexp.MustCompile(`^\[(\d+):(\d{2})(?:[.:](\d+))?\]`)
 	endTime = regexp.MustCompile(`\[(\d+):(\d{2})(?:[.:](\d+))?\]\s*$`)
 )
