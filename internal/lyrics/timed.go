@@ -77,7 +77,11 @@ func ParseTimed(text string) (*music.Lyrics, bool) {
 func parseWordClock(s string) int64 {
 	parts := strings.SplitN(s, ":", 2)
 	if len(parts) != 2 { return 0 }
-	return parseClock(parts[0], strings.SplitN(parts[1], ".", 2)[0], fractionPart(parts[1]))
+	second := parts[1]
+	if i := strings.IndexAny(second, ".:"); i >= 0 {
+		second = second[:i]
+	}
+	return parseClock(parts[0], second, fractionPart(parts[1]))
 }
 
 func fractionPart(s string) string {
