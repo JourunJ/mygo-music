@@ -14,6 +14,33 @@ A native desktop music player written in Go with [MyGo](https://github.com/egois
 - English and Simplified Chinese
 - Plugins can add accounts, catalogs, podcasts, stations, comments and pages of their own
 
+## Changes in this fork
+
+This fork includes additional fixes to local lyric matching and timed lyric parsing:
+
+- Improved matching of local LRC files alongside audio files.
+- Fixed parsing of lyrics with both line start and end timestamps.
+- Added support for word-level timestamps in bracketed LRC-style formats.
+- Added tests for local lyric matching and timed lyric parsing.
+
+These changes are maintained in this fork and are not necessarily part of the upstream project.
+
+## Build on Windows
+
+To build a Windows executable without opening a console window:
+
+```powershell
+go build -ldflags="-H windowsgui" -o MyGoMusic.exe .
+```
+
+To embed a custom application icon, place your `icon.ico` in the project root and generate the Windows resource file first:
+
+```powershell
+go install github.com/akavel/rsrc@latest
+rsrc -ico icon.ico -o rsrc_windows_amd64.syso
+go build -ldflags="-H windowsgui" -o MyGoMusic.exe .
+```
+
 ## Build
 
 ```bash
