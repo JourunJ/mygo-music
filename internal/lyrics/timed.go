@@ -18,6 +18,7 @@ var (
 
 // ParseTimed reads local lyrics with line or word timings. It accepts QRC,
 // enhanced LRC/Folia, and LRC lines with an explicit ending timestamp.
+// Ordinary start-only LRC is left to the app's existing LRC parser.
 func ParseTimed(text string) (*music.Lyrics, bool) {
 	var lines []music.LyricLine
 	byStart := make(map[int64]int)
@@ -68,31 +69,39 @@ func ParseTimed(text string) (*music.Lyrics, bool) {
 		}
 
 		startMatch := lineTime.FindStringSubmatchIndex(raw)
-		if startMatch == nil {
-			// Folia-style lines may start directly with word timestamps.
-			if !wordTime.MatchString(raw) {
-				continue
-			}
+		if startMatch == nil && !wordTime.MatchString(raw) {
+			continue
 		}
 
 		line := music.LyricLine{}
 		body := raw
 		if startMatch != nil {
-			line.Start = parseClock(raw[startMatch[2]:startMatch[3]], raw[startMatch[4]:startMatch[5]], fractionFromMatch(raw, startMatch))
+			line.Start = parseClock(
+				raw[startMatch[2]:startMatch[3]],
+				raw[startMatch[4]:startMatch[5]],
+				submatch(raw, startMatch, 3),
+			)
 			body = raw[startMatch[1]:]
 		}
 
-		// A timestamp at the very end is the line's explicit end, not lyric
-		// text. This is the [start]text[end] form used by some LRC files.
-		if m := endTime.FindStringSubmatchIndex(body); m != nil {
-			line.End = parseClock(body[m[2]:m[3]], body[m[4]:m[5]], fractionFromMatch(body, m))
-			body = strings.TrimSpace(body[:m[0]])
+		// A timestamp at the very end is the line's explicit end, not lyric text.
+		endMatch := endTime.FindStringSubmatchIndex(body)
+		hasLineEnd := endMatch != nil
+		if hasLineEnd {
+			line.End = parseClock(
+				body[endMatch[2]:endMatch[3]],
+				body[endMatch[4]:endMatch[5]],
+				submatch(body, endMatch, 3),
+			)
+			body = strings.TrimSpace(body[:endMatch[0]])
 		}
 
 		matches := wordTime.FindAllStringSubmatchIndex(body, -1)
 		if len(matches) == 0 {
-			line.Text = strings.TrimSpace(body)
-			if line.Text != "" && startMatch != nil {
+			// Do not intercept ordinary [start] LRC lines: the legacy parser
+			// handles those, including its established metadata/translation path.
+			if hasLineEnd && startMatch != nil {
+				line.Text = strings.TrimSpace(body)
 				appendLine(line)
 			}
 			continue
@@ -136,18 +145,13 @@ func ParseTimed(text string) (*music.Lyrics, bool) {
 	return &music.Lyrics{Lines: lines}, true
 }
 
-// fractionFromMatch returns the optional fractional part of a [mm:ss.xxx] tag.
-func fractionFromMatch(s string, m []int) string {
-	if m[1] < m[0] || m[1] > len(s) {
+// submatch returns an optional capture group without losing fractional digits.
+func submatch(s string, indexes []int, group int) string {
+	i := group * 2
+	if len(indexes) <= i+1 || indexes[i] < 0 || indexes[i+1] < 0 {
 		return ""
 	}
-	tag := s[m[0]:m[1]]
-	if i := strings.IndexAny(tag, ".:"); i >= 0 {
-		if close := strings.LastIndex(tag, "]"); close > i {
-			return tag[i+1 : close]
-		}
-	}
-	return ""
+	return s[indexes[i]:indexes[i+1]]
 }
 
 func parseWordClock(s string) int64 {
@@ -180,6 +184,8 @@ func parseClock(minute, second, fraction string) int64 {
 			ms = n * 100
 		case 2:
 			ms = n * 10
+		case 3:
+			ms = n
 		default:
 			ms = n / int64Pow10(len(fraction)-3)
 		}
