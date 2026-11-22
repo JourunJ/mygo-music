@@ -540,14 +540,20 @@ func (s *Source) Lyrics(id string) (*music.Lyrics, error) {
 		return nil, music.ErrUnavailable
 	}
 	base := strings.TrimSuffix(it.Path, filepath.Ext(it.Path))
+	var plain *music.Lyrics
 	for _, ext := range []string{".lrc", ".LRC", ".qrc", ".QRC"} {
 		if b, err := os.ReadFile(base + ext); err == nil {
 			text := strings.TrimPrefix(string(b), "\xef\xbb\xbf")
 			if timed, ok := lyrics.ParseTimed(text); ok {
 				return timed, nil
 			}
-			return &music.Lyrics{LRC: text}, nil
+			if plain == nil {
+				plain = &music.Lyrics{LRC: text}
+			}
 		}
+	}
+	if plain != nil {
+		return plain, nil
 	}
 	f, err := os.Open(it.Path)
 	if err != nil {
