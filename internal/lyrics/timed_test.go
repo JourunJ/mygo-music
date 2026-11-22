@@ -81,3 +81,30 @@ func TestParseTimedLeavesPlainLRCToLegacyParser(t *testing.T) {
 		t.Fatalf("ordinary LRC should not be intercepted: %+v", got)
 	}
 }
+
+func TestParseTimedBracketedWordTimestamps(t *testing.T) {
+	input := `[00:08.778]You [00:08.922]love [00:09.218]minor[00:10.058]
+[00:08.778]你喜欢慢节奏的小调 而非大调[00:10.058]`
+
+	got, ok := ParseTimed(input)
+	if !ok {
+		t.Fatal("expected bracketed word-timed lyrics to parse")
+	}
+	if len(got.Lines) != 1 {
+		t.Fatalf("got %d lines, want 1: %+v", len(got.Lines), got.Lines)
+	}
+	line := got.Lines[0]
+	if len(line.Words) != 3 {
+		t.Fatalf("got %d words, want 3: %+v", len(line.Words), line.Words)
+	}
+	wantStarts := []int64{8778, 8922, 9218}
+	wantTexts := []string{"You ", "love ", "minor"}
+	for i, word := range line.Words {
+		if word.Start != wantStarts[i] || word.Text != wantTexts[i] {
+			t.Errorf("word %d = %+v, want start %d text %q", i, word, wantStarts[i], wantTexts[i])
+		}
+	}
+	if line.Translation != "你喜欢慢节奏的小调 而非大调" {
+		t.Errorf("translation = %q", line.Translation)
+	}
+}
