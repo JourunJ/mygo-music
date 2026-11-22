@@ -4,16 +4,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"mygo-music/internal/music"
 )
 
 var (
-	qrcLine = regexp.MustCompile(`^\\[(\\d+),(\\d+)\\]`)
-	qrcWord = regexp.MustCompile(`\\((\\d+),(\\d+),\\d+\\)`)
-	wordTime = regexp.MustCompile(`<((?:\\d+):\\d{2}(?:[.:]\\d+)?)>`)
-	lineTime = regexp.MustCompile(`\\[(\\d+):(\\d{2})(?:[.:](\\d+))?\\]`)
+	qrcLine = regexp.MustCompile(`^\[(\d+),(\d+)\]`)
+	qrcWord = regexp.MustCompile(`\((\d+),(\d+),\d+\)`)
+	wordTime = regexp.MustCompile(`<((?:\d+):\d{2}(?:[.:]\d+)?)>`)
+	lineTime = regexp.MustCompile(`\[(\d+):(\d{2})(?:[.:](\d+))?\]`)
 )
 
 // ParseTimed reads word-timed local lyrics. It accepts QRC's millisecond
@@ -21,7 +20,7 @@ var (
 // It returns false when the text has no recognizable word timings.
 func ParseTimed(text string) (*music.Lyrics, bool) {
 	var lines []music.LyricLine
-	for _, raw := range strings.Split(strings.ReplaceAll(text, "\\r\\n", "\\n"), "\\n") {
+	for _, raw := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
 		if m := qrcLine.FindStringSubmatchIndex(raw); len(m) > 0 {
 			start, _ := strconv.ParseInt(raw[m[2]:m[3]], 10, 64)
 			duration, _ := strconv.ParseInt(raw[m[4]:m[5]], 10, 64)
@@ -103,5 +102,3 @@ func int64Pow10(n int) int64 {
 	return v
 }
 
-// Keep time imported here to make the units explicit in this parser.
-var _ = time.Millisecond
