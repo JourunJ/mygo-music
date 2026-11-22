@@ -72,3 +72,12 @@ func TestParseTimedSameTimestampTranslation(t *testing.T) {
 		t.Errorf("translation not retained: %+v", got.Lines[0])
 	}
 }
+
+
+func TestParseTimedLeavesPlainLRCToLegacyParser(t *testing.T) {
+	input := `[00:01.000]line one
+[00:02.000]line two`
+	if got, ok := ParseTimed(input); ok {
+		t.Fatalf("ordinary LRC should not be intercepted: %+v", got)
+	}
+}
