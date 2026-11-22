@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 
 	"mygo-music/internal/i18n"
+	"mygo-music/internal/lyrics"
 	"mygo-music/internal/music"
 )
 
@@ -532,18 +533,27 @@ func (s *Source) PostComment(trackID, text string) (*music.Comment, error) {
 // lrcTime is how a line of LRC starts, which tells it from plain words.
 var lrcTime = regexp.MustCompile(`\[\d+:\d{2}`)
 
-// Lyrics answers the .lrc beside the file, or else what's in its tags if it's
-// timed: plain words can't follow the song.
+// Lyrics answers a timed sidecar beside the file, or else what's in its tags.
 func (s *Source) Lyrics(id string) (*music.Lyrics, error) {
 	it, ok := s.cat.Load().byID[id]
 	if !ok {
 		return nil, music.ErrUnavailable
 	}
 	base := strings.TrimSuffix(it.Path, filepath.Ext(it.Path))
-	for _, ext := range []string{".lrc", ".LRC"} {
+	var plain *music.Lyrics
+	for _, ext := range []string{".lrc", ".LRC", ".qrc", ".QRC"} {
 		if b, err := os.ReadFile(base + ext); err == nil {
-			return &music.Lyrics{LRC: strings.TrimPrefix(string(b), "\xef\xbb\xbf")}, nil
+			text := strings.TrimPrefix(string(b), "\xef\xbb\xbf")
+			if timed, ok := lyrics.ParseTimed(text); ok {
+				return timed, nil
+			}
+			if plain == nil {
+				plain = &music.Lyrics{LRC: text}
+			}
 		}
+	}
+	if plain != nil {
+		return plain, nil
 	}
 	f, err := os.Open(it.Path)
 	if err != nil {
@@ -555,6 +565,9 @@ func (s *Source) Lyrics(id string) (*music.Lyrics, error) {
 		size = info.Size()
 	}
 	if t := readTags(f, fileType(f, it.Path), size); lrcTime.MatchString(t.lyrics) {
+		if timed, ok := lyrics.ParseTimed(t.lyrics); ok {
+			return timed, nil
+		}
 		return &music.Lyrics{LRC: t.lyrics}, nil
 	}
 	return &music.Lyrics{}, nil
