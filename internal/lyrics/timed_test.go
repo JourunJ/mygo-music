@@ -57,9 +57,9 @@ func TestParseTimedLineStartAndEnd(t *testing.T) {
 }
 
 func TestParseTimedSameTimestampTranslation(t *testing.T) {
-	input := `[00:10.000]Original lyric
-[00:10.000]Translated lyric
-[00:12.000]Next line`
+	input := `[00:10.000]Original lyric[00:11.000]
+[00:10.000]Translated lyric[00:11.000]
+[00:12.000]Next line[00:13.000]`
 
 	got, ok := ParseTimed(input)
 	if !ok {
